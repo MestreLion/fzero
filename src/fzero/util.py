@@ -210,5 +210,5 @@ def openstd(
     try:
         yield fh
     finally:
-        if fh is not sys.stdout:
-            fh.close()
+        # No need to worry about closing stdin/stdout or their buffers
+        fh.close()
