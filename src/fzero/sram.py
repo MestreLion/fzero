@@ -70,7 +70,7 @@ class Record:
         self.display = display
 
     @classmethod
-    def from_data(cls, data: bytes) -> t.Self:
+    def from_data(cls, data: bytes) -> Record:
         record = tuple(unpack(data, 8, 8, 4, 2, 1, 1))
         return cls(
             cents   = record[0],
@@ -83,7 +83,6 @@ class Record:
 
     # Could also be __bytes__
     def to_data(self) -> bytes:
-        # noinspection PyTypeChecker
         return pack(
             (self.cents,   8),
             (self.seconds, 8),

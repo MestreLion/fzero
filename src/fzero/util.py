@@ -187,21 +187,23 @@ class ArgumentParser(argparse.ArgumentParser):
 def openstd(
     path: t.Optional["PathLike"] = None,
     mode: str = "r"
-) -> t.Generator[t.IO[t.Any], None, None]:
+) -> t.Generator[t.Any, None, None]:
     """
     Context wrapping open() to return stdin/stdout when path is "-"
 
     Wrapping behaves as argparse.FileType from Python 3.9, see its caveats in
     custom ArgumentParser above.
     """
+    # Using Any because an accurate return type would require several overloads.
+    # Caller can assign returned value to t.BinaryIO or t.TextIO depending on mode
+    # IO[Any] does not work either. Also see https://github.com/python/mypy/issues/15808
     if path and path != "-":
-        fh = open(path, mode)
+        fh: t.Any = open(path, mode)
     else:
-        # for the "type: ignore"s, see https://github.com/python/mypy/issues/15808
         if "r" in mode:
-            fh = sys.stdin.buffer if 'b' in mode else sys.stdin    # type: ignore
+            fh = sys.stdin.buffer if 'b' in mode else sys.stdin
         elif any(c in mode for c in 'wax'):
-            fh = sys.stdout.buffer if 'b' in mode else sys.stdout  # type: ignore
+            fh = sys.stdout.buffer if 'b' in mode else sys.stdout
         else:
             # intentionally not using custom exception
             raise ValueError(f"Tried to open '-' (stdin/stdout) with mode {mode!r}")
