@@ -66,17 +66,10 @@ version = {attr = "fzero.__main__.__version__"}
 # -----------------------------------------------------------------------------
 # Tools
 
-# Run as: make check
 [tool.mypy]
 packages = "fzero"
-# exclude = ["venv"]
 strict = true
 
-# Run as: make format
 [tool.black]
-target-version = ["py37", "py38", "py39", "py310", "py311"]
+target-version = ["py38", "py39", "py310", "py311"]
 line-length = 94
-
-#[tool.isort]
-#profile = "black"
-#line_length = 94

@@ -21,22 +21,18 @@ def cli(argv: t.Optional[t.List[str]] = None) -> None:
     parser = u.ArgumentParser(description=__doc__, version=__version__)
     parser.add_argument(
         nargs="?",
-        type=u.ArgumentParser.FileType("rb"),
         default="-",
-        dest="file",
-        metavar="FILE",
-        help="File to export to or import from. [Default: stdout / stdin]"
+        dest="infile",
+        metavar="INPUT_FILE",
+        help="SRAM save file to import from. [Default: stdin]"
     )
     args = parser.parse_args(argv)
     u.setup_logging(level=args.loglevel)
     log.debug(args)
 
-#    with u.openstd(args.file, 'rb') as (fd, name):
-#        log.debug("Reading from %s", name)
-#        sram.parse(fd)
-
-    log.debug("Reading from %s", args.file.name)
-    sram.parse(args.file)
+    with u.openstd(args.infile, 'rb') as fd:
+        log.debug("Reading from %s", fd.name)
+        sram.parse(fd)
 
 
 def run(argv: t.Optional[t.List[str]] = None) -> None:

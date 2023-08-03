@@ -70,7 +70,7 @@ class Record:
         self.display = display
 
     @classmethod
-    def from_data(cls, data: bytes) -> Record:
+    def from_data(cls, data: bytes) -> t.Self:
         record = tuple(unpack(data, 8, 8, 4, 2, 1, 1))
         return cls(
             cents   = record[0],
