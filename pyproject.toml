@@ -1,0 +1,82 @@
+# -----------------------------------------------------------------------------
+# Metadata
+# https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
+[project]
+name = "fzero"
+authors = [
+    {name="Rodrigo Silva (MestreLion)", email="linux@rodrigosilva.com"},
+]
+description = "F-Zero (SNES) SRAM Save Editor"
+license =  {text = "GPL-3.0-or-later"}  # Free text, using SPDX
+urls."Homepage" = "https://github.com/MestreLion/fzero"
+urls."Source Code" = "https://github.com/MestreLion/fzero"
+urls."Issue Tracker" = "https://github.com/MestreLion/fzero/issues"
+readme = "README.md"
+keywords = [ "fzero", "f-zero", "snes", "emulator", "sram", "game", "save", "editor"]
+classifiers = [
+    # https://pypi.org/classifiers/
+    "Development Status :: 1 - Planning",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment",
+    "Topic :: System :: Emulators",
+    "Topic :: Utilities",
+    # "Typing :: Typed",
+]
+dynamic = ["version"]
+
+# -----------------------------------------------------------------------------
+# Requirements
+requires-python = ">=3.8"  # bytes.hex(sep)
+dependencies = [
+]
+[project.optional-dependencies]
+dev = [
+    "black",
+    "mypy >= 0.900",  # Supports pyproject.toml
+]
+# -----------------------------------------------------------------------------
+# Entry points
+[project.scripts]
+fzero-save-editor = "fzero.__main__:run"
+
+# -----------------------------------------------------------------------------
+# Building
+# https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
+[build-system]
+requires = ["setuptools >= 61.0.0"]  # Supports pyproject.toml configuration
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-data = {'*' = ['py.typed']}
+
+[tool.setuptools.dynamic]
+version = {attr = "fzero.__main__.__version__"}
+
+# -----------------------------------------------------------------------------
+# Tools
+
+# Run as: make check
+[tool.mypy]
+packages = "fzero"
+# exclude = ["venv"]
+strict = true
+
+# Run as: make format
+[tool.black]
+target-version = ["py37", "py38", "py39", "py310", "py311"]
+line-length = 94
+
+#[tool.isort]
+#profile = "black"
+#line_length = 94
