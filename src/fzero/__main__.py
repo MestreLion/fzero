@@ -27,7 +27,7 @@ def cli(argv: t.Optional[t.List[str]] = None) -> None:
         help="SRAM save file to import from. [Default: stdin]"
     )
     args = parser.parse_args(argv)
-    u.setup_logging(level=args.loglevel)
+    u.setup_logging(level=args.loglevel, fmt="%(levelname)-8s: %(message)s")
     log.debug(args)
 
     infile: t.BinaryIO
