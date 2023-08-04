@@ -138,7 +138,7 @@ def pack(*values: t.Tuple[t.SupportsInt, int]) -> bytes:
     for value, bits in values:
         num += (int(str(int(value)), 16) & ((1 << bits) - 1)) << shift
         shift += bits
-    return num.to_bytes((shift.bit_length() + 7) // 8, 'big')
+    return num.to_bytes((shift + 7) // 8, 'big')
 
 
 def parse(fd: t.BinaryIO) -> None:
