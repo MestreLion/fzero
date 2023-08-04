@@ -16,14 +16,41 @@ from . import util as u
 
 log: logging.Logger = logging.getLogger(__name__)
 
+# Constants ------------------------------------------------------------------
 SRAM_SIZE: int = 2048
 SIGNATURE: str = "FZERO"  # Header and Footer
-LEAGUES: t.Sequence[str] = ("Knight", "Queen", "King")
+LEAGUES: int = 3
 TRACKS: int = 5  # Per league
 RECORDS: int = 11  # Per track, 10 best races + 1 best lap
 RECORD_SIZE: int = 3  # mode+car+minutes, seconds, centiseconds
 CHECKSUM_SIZE: int = 2
+LEAGUE_INFO: t.Dict[str, t.Tuple[str, str, str, str, str]] = {
+    "Knight": (
+        "Mute City I",
+        "Big Blue",
+        "Sand Ocean",
+        "Death Wind I",
+        "Silence",
+    ),
+    "Queen": (
+        "Mute City II",
+        "Port Town I",
+        "Red Canyon I",
+        "White Land I",
+        "White Land II",
+    ),
+    "King": (
+        "Mute City III",
+        "Death Wind II",
+        "Port Town II",
+        "Red Canyon II",
+        "Fire Field",
+    )
+}
+assert len(LEAGUE_INFO) == LEAGUES
+assert ((_ := set(len(_) for _ in LEAGUE_INFO.values())).pop() == TRACKS and not _)
 
+# Derived constants ----------------------------------------------------------
 # Data size can be derived from above:
 # 5 header
 # 3 leagues * ((5 tracks * 11 records * 3 bytes) + 2 checksum)
@@ -144,7 +171,7 @@ def pack(*values: t.Tuple[t.SupportsInt, int]) -> bytes:
 def parse(fd: t.BinaryIO) -> None:
     log.info("Header (%s): %s", SIGNATURE, fd.read(len(SIGNATURE)))
 
-    for league in LEAGUES:
+    for league in LEAGUE_INFO:
         log.info("%s League:", league)
 
         data = fd.read(TRACKS * RECORDS * RECORD_SIZE)
@@ -170,6 +197,6 @@ def parse(fd: t.BinaryIO) -> None:
     flags, checksum = unpack(data, 4, 4)
     if not flags == checksum:
         log.warning("Invalid Master Unlocks value: %s", data.hex())
-    unlocks = tuple(LEAGUES[i] for i, v in enumerate(unpack(data, 1, 1, 1)) if v)
+    unlocks = (list(LEAGUE_INFO)[i] for i, v in enumerate(unpack(data, 1, 1, 1)) if v)
     log.info("Master Unlocks: %s [%s]", ", ".join(unlocks), data.hex())
     log.info("Footer (%s): %s", SIGNATURE, fd.read(len(SIGNATURE)))
