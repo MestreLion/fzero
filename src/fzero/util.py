@@ -24,7 +24,7 @@ License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
 """
 
 _T = t.TypeVar("_T")  # general-use
-
+_SequenceT = t.TypeVar("_SequenceT", bound=t.Sequence)
 
 class FZeroError(Exception):
     """Base class for custom exceptions with %-formatting for args
@@ -63,7 +63,11 @@ def interpolate(msg: object = "", *args: object) -> str:
 
 def chunked(data: t.Sequence[_T], chunk_size: int) -> t.Iterator[t.List[_T]]:
     # Adapted from https://stackoverflow.com/a/312464/624066
-    return (list(data[i:i + chunk_size]) for i in range(0, len(data), chunk_size))
+    return (list(sliced(data, i, chunk_size)) for i in range(0, len(data), chunk_size))
+
+
+def sliced(data: _SequenceT, offset: int = 0, length: int = 0) -> _SequenceT:
+    return data[offset:offset + length]
 
 
 def setup_logging(

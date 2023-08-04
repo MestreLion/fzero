@@ -18,12 +18,13 @@ log: logging.Logger = logging.getLogger(__name__)
 
 # Constants ------------------------------------------------------------------
 SRAM_SIZE: int = 2048
-SIGNATURE: str = "FZERO"  # Header and Footer
+SIGNATURE: bytes = b"FZERO"  # Header and Footer
 LEAGUES: int = 3
 TRACKS: int = 5  # Per league
 RECORDS: int = 11  # Per track, 10 best races + 1 best lap
 RECORD_SIZE: int = 3  # mode+car+minutes, seconds, centiseconds
 CHECKSUM_SIZE: int = 2
+UNLOCKS_SIZE: int = 1  # Leagues' Master difficulty unlock status
 LEAGUE_INFO: t.Dict[str, t.Tuple[str, str, str, str, str]] = {
     "Knight": (
         "Mute City I",
@@ -154,24 +155,24 @@ class Time(t.NamedTuple):
 
 
 class League:
-    def __init__(self, records: t.Iterable[Record], name: str = ""):
+    def __init__(self, records: t.Iterable[Record] = (), name: str = ""):
         self.records: t.List[Record] = list(records)
         self.name = name
 
     @classmethod
-    def from_data(cls, data: bytes, name: str = "", raise_on_checksum: bool = True) -> League:
-        records = []
+    def from_data(cls, data: bytes, name: str = "", raise_on_checksum: bool = False) -> League:
+        self = cls(name=name)
         offset = 0
         for i in range(TRACKS):
             for r in range(RECORDS):
-                record = Record.from_data(data[offset:offset + RECORD_SIZE])
+                record = Record.from_data(u.sliced(data, offset, RECORD_SIZE))
                 log.debug("%04X: Track %02s, record %02s: [%s] %r",
                           offset, i, r, record.to_data().hex(":"), record)
-                records.append(record)
+                self.records.append(record)
                 offset += RECORD_SIZE
 
-        checksum = Checksum.parse(data[offset:offset + CHECKSUM_SIZE])
-        expected = Checksum.from_data(data[:offset])
+        checksum = Checksum.parse(u.sliced(data, offset, CHECKSUM_SIZE))
+        expected = Checksum.from_data(u.sliced(data, 0, offset))
         if checksum == expected:
             log.debug("League checksum OK [%s]", checksum)
         else:
@@ -180,7 +181,7 @@ class League:
                 raise u.BadData(*args)
             else:
                 log.warning(*args)
-        return cls(records, name)
+        return self
 
     def to_data(self) -> bytes:
         data = b''.join(_.to_data() for _ in self.records)
@@ -194,7 +195,7 @@ class League:
     def tracks(self):
         return LEAGUE_INFO.get(self.name) or tuple(f"Track {_ + 1}" for _ in range(TRACKS))
 
-    def pretty(self, level: int = 0, show_hidden: bool = False, league: str = "") -> str:
+    def pretty(self, level: int = 0, show_hidden: bool = False) -> str:
         msg = ""
         indent = level * "\t"
         tracks = self.tracks
