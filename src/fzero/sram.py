@@ -36,7 +36,6 @@ class Mode(u.Enum):
     GRAND_PRIX = 0
     PRACTICE   = 1
 
-    @property
     def pretty(self) -> str:
         # for "type: ignore", see https://github.com/python/mypy/issues/10910
         return "*" if self is self.PRACTICE else " "  # type: ignore
@@ -96,11 +95,10 @@ class Record:
     def time(self) -> Time:
         return Time(self.minutes, self.seconds, self.cents)
 
-    @property
     def pretty(self) -> str:
         if not self.display:
             return "-"
-        return f"{self.time.pretty} {self.mode.pretty} {self.car.pretty}"
+        return f"{self.time.pretty()} {self.mode.pretty()} {self.car.pretty()}"
 
     def __str__(self) -> str:
         text = f"{self.time} {self.mode} {self.car}"
@@ -117,7 +115,6 @@ class Time(t.NamedTuple):
     seconds: int = 59
     cents:   int = 99
 
-    @property
     def pretty(self) -> str:
         # noinspection GrazieInspection
         return "{0.minutes}’{0.seconds:02}”{0.cents:02}".format(self)
@@ -148,7 +145,7 @@ def parse(fd: t.BinaryIO) -> None:
     log.info("Header (%s): %s", SIGNATURE, fd.read(len(SIGNATURE)))
 
     for league in LEAGUES:
-        log.info("%6s League:", league)
+        log.info("%s League:", league)
 
         data = fd.read(TRACKS * RECORDS * RECORD_SIZE)
         for i in range(TRACKS):
@@ -158,7 +155,7 @@ def parse(fd: t.BinaryIO) -> None:
                 record_data = data[offset:offset+RECORD_SIZE]
                 record = Record.from_data(record_data)
                 log.info("\t\t%2s: %s [%s]",
-                         r+1, record.pretty, record_data.hex(":"))
+                         r+1, record.pretty(), record_data.hex(":"))
 
         checksum = int.from_bytes(fd.read(CHECKSUM_SIZE), 'little')
         expected = sum(data)

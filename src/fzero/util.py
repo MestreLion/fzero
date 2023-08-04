@@ -39,7 +39,6 @@ class BadData(FZeroError):
 
 
 class Enum(enum.Enum):
-    @property
     def pretty(self) -> str:
         return self.name.replace("_", " ").title()
 
@@ -52,7 +51,12 @@ class Enum(enum.Enum):
 
 def printf(msg: object = "", *args: object) -> None:
     """print() wrapper with %-formatting for args"""
-    print((str(msg) % args) if args else msg)
+    print(interpolate(msg, *args))
+
+
+def interpolate(msg: object = "", *args: object) -> str:
+    """String interpolation (%-formatting) as a function"""
+    return (str(msg) % args) if args else str(msg)
 
 
 def setup_logging(
