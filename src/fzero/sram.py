@@ -51,14 +51,6 @@ LEAGUE_INFO: t.Dict[str, t.Tuple[str, str, str, str, str]] = {
 assert len(LEAGUE_INFO) == LEAGUES
 assert ((_ := set(len(_) for _ in LEAGUE_INFO.values())).pop() == TRACKS and not _)
 
-# Derived constants ----------------------------------------------------------
-# Data size can be derived from above:
-# 5 header
-# 3 leagues * ((5 tracks * 11 records * 3 bytes) + 2 checksum)
-# 1 master unlocks
-# 5 footer
-DATA_SIZE: int = 512
-
 
 class Mode(u.Enum):
     GRAND_PRIX = 0
@@ -223,6 +215,71 @@ class Checksum(int):
         return self.to_data().hex().upper()
 
 
+class Save:
+    SIGNATURE_SIZE: int = len(SIGNATURE)
+    LEAGUE_SIZE: int = RECORD_SIZE * RECORDS * TRACKS + CHECKSUM_SIZE
+    DATA_SIZE: int = LEAGUE_SIZE * LEAGUES + 2 * SIGNATURE_SIZE + UNLOCKS_SIZE
+    assert DATA_SIZE == 512
+
+    def __init__(
+        self,
+        leagues: t.Iterable[League] = (),
+        unlocks: t.Iterable[bool] = (),
+    ):
+        self.leagues: t.List[League] = list(leagues)[:LEAGUES]
+        self.unlocks: t.List[bool]   = list(unlocks)[:LEAGUES]
+
+    @classmethod
+    def from_sram(cls, path: u.PathLike) -> Save:
+        with u.openstd(path, 'rb') as fd:
+            log.debug("Reading from %s", fd.name)
+            data = fd.read(cls.DATA_SIZE)
+        return cls.from_data(data)
+
+    @classmethod
+    def from_data(cls, data: bytes) -> Save:
+        self = cls()
+        cls._check_signature(data, 0, "Header")
+        offset = cls.SIGNATURE_SIZE
+        for i, league in enumerate(LEAGUE_INFO):
+            log.debug("Parsing %s League", league)
+            self.leagues.append(League.from_data(data=u.sliced(data, offset, cls.LEAGUE_SIZE),
+                                                 name=league))
+            offset += cls.LEAGUE_SIZE
+        self.unlocks = cls._parse_unlocks(u.sliced(data, offset, UNLOCKS_SIZE))
+        cls._check_signature(data, offset + UNLOCKS_SIZE, "Footer")
+        return self
+
+    @classmethod
+    def _check_signature(cls, data: bytes, offset: int, label: str) -> bool:
+        signature = u.sliced(data, offset, cls.SIGNATURE_SIZE)
+        check = signature == SIGNATURE
+        if check:
+            log.debug("%s signature at 0x%04X OK!", label, offset)
+        else:
+            log.warning("%s signature mismatch at 0x%04X: %s, expected %s",
+                        label, offset, signature, SIGNATURE)
+        return check
+
+    @classmethod
+    def _parse_unlocks(cls, data: bytes) -> t.List[bool]:
+        bits = UNLOCKS_SIZE * 8
+        unlocks, mirror = u.chunked(list(unpack(data, *(bits * [1]))), bits // 2)
+        if unlocks == mirror and set(unlocks[LEAGUES:]) == {0}:
+            log.debug("Master Unlocks OK! [%s], %s", data.hex().upper(), unlocks)
+        else:
+            log.warning("Invalid Master Unlocks data: [%s]", data.hex().upper())
+            unlocks = []
+        return [bool(_) for _ in unlocks][:LEAGUES]
+
+    def pretty(self) -> str:
+        msg = ""
+        for league in self.leagues:
+            msg += f"{league.name} League\n{league.pretty(level=1)}\n"
+        unlocks = ", ".join(list(LEAGUE_INFO)[i] for i, v in enumerate(self.unlocks) if v)
+        return msg + f"Master difficulty unlocked for leagues: {unlocks}"
+
+
 def unpack(data: t.Union[bytes, int], *bit_lengths: int) -> t.Iterable[int]:
     num: int = int.from_bytes(data, 'big') if isinstance(data, bytes) else data
     for bits in bit_lengths:
@@ -236,20 +293,3 @@ def pack(*values: t.Tuple[t.SupportsInt, int]) -> bytes:
         num += (int(str(int(value)), 16) & ((1 << bits) - 1)) << shift
         shift += bits
     return num.to_bytes((shift + 7) // 8, 'big')
-
-
-def parse(fd: t.BinaryIO) -> None:
-    log.info("Header (%s): %s", SIGNATURE, fd.read(len(SIGNATURE)))
-
-    for league in LEAGUE_INFO:
-        log.info("%s League:", league)
-        data = fd.read(TRACKS * RECORDS * RECORD_SIZE + CHECKSUM_SIZE)
-        log.info(League.from_data(data, league, raise_on_checksum=False).pretty(level=1))
-
-    data = fd.read(1)
-    flags, checksum = unpack(data, 4, 4)
-    if not flags == checksum:
-        log.warning("Invalid Master Unlocks value: %s", data.hex())
-    unlocks = (list(LEAGUE_INFO)[i] for i, v in enumerate(unpack(data, 1, 1, 1)) if v)
-    log.info("Master Unlocks: %s [%s]", ", ".join(unlocks), data.hex())
-    log.info("Footer (%s): %s", SIGNATURE, fd.read(len(SIGNATURE)))

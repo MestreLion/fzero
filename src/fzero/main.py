@@ -30,10 +30,7 @@ def cli(argv: t.Optional[t.List[str]] = None) -> None:
     u.setup_logging(level=args.loglevel, fmt="%(levelname)-8s: %(message)s")
     log.debug(args)
 
-    infile: t.BinaryIO
-    with u.openstd(args.infile, 'rb') as infile:
-        log.debug("Reading from %s", infile.name)
-        sram.parse(infile)
+    print(sram.Save.from_sram(args.infile).pretty())
 
 
 def run(argv: t.Optional[t.List[str]] = None) -> None:
