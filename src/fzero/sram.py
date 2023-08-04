@@ -153,6 +153,75 @@ class Time(t.NamedTuple):
         return 100 * (60 * self.minutes + self.seconds) + self.cents
 
 
+class League:
+    def __init__(self, records: t.Iterable[Record], name: str = ""):
+        self.records: t.List[Record] = list(records)
+        self.name = name
+
+    @classmethod
+    def from_data(cls, data: bytes, name: str = "", raise_on_checksum: bool = True) -> League:
+        records = []
+        offset = 0
+        for i in range(TRACKS):
+            for r in range(RECORDS):
+                record = Record.from_data(data[offset:offset + RECORD_SIZE])
+                log.debug("%04X: Track %02s, record %02s: [%s] %r",
+                          offset, i, r, record.to_data().hex(":"), record)
+                records.append(record)
+                offset += RECORD_SIZE
+
+        checksum = Checksum.parse(data[offset:offset + CHECKSUM_SIZE])
+        expected = Checksum.from_data(data[:offset])
+        if checksum == expected:
+            log.debug("League checksum OK [%s]", checksum)
+        else:
+            args = "League checksum FAIL: %s, expected %s", checksum, expected
+            if raise_on_checksum:
+                raise u.BadData(*args)
+            else:
+                log.warning(*args)
+        return cls(records, name)
+
+    def to_data(self) -> bytes:
+        data = b''.join(_.to_data() for _ in self.records)
+        return data + Checksum.from_data(data).to_data()
+
+    @property
+    def checksum(self) -> bytes:
+        return self.to_data()[-CHECKSUM_SIZE:]
+
+    @property
+    def tracks(self):
+        return LEAGUE_INFO.get(self.name) or tuple(f"Track {_ + 1}" for _ in range(TRACKS))
+
+    def pretty(self, level: int = 0, show_hidden: bool = False, league: str = "") -> str:
+        msg = ""
+        indent = level * "\t"
+        tracks = self.tracks
+        for track, records in enumerate(u.chunked(self.records, RECORDS)):
+            msg += f"{indent}{tracks[track]}\n"
+            for r, record in enumerate(records, 1):
+                if record.display or show_hidden:
+                    msg += f"{indent}\t{r:2}: {record.pretty()}\n"
+        return msg
+
+
+class Checksum(int):
+    @classmethod
+    def parse(cls, checksum: bytes) -> Checksum:
+        return cls.from_bytes(checksum, 'little')
+
+    @classmethod
+    def from_data(cls, data: bytes) -> Checksum:
+        return cls(sum(data))
+
+    def to_data(self) -> bytes:
+        return self.to_bytes(CHECKSUM_SIZE, 'little')
+
+    def __str__(self) -> str:
+        return self.to_data().hex().upper()
+
+
 def unpack(data: t.Union[bytes, int], *bit_lengths: int) -> t.Iterable[int]:
     num: int = int.from_bytes(data, 'big') if isinstance(data, bytes) else data
     for bits in bit_lengths:
@@ -173,25 +242,8 @@ def parse(fd: t.BinaryIO) -> None:
 
     for league in LEAGUE_INFO:
         log.info("%s League:", league)
-
-        data = fd.read(TRACKS * RECORDS * RECORD_SIZE)
-        for i in range(TRACKS):
-            log.info("\tTrack %s", i+1)
-            for r in range(RECORDS):
-                offset = (i * RECORDS + r) * RECORD_SIZE
-                record_data = data[offset:offset+RECORD_SIZE]
-                record = Record.from_data(record_data)
-                log.info("\t\t%2s: %s [%s]",
-                         r+1, record.pretty(), record_data.hex(":"))
-
-        checksum = int.from_bytes(fd.read(CHECKSUM_SIZE), 'little')
-        expected = sum(data)
-        if checksum == expected:
-            log.info("%6s League checksum OK [%04X]", league, checksum)
-        else:
-            log.warning("%6s League checksum FAIL: %04X, expected %04X",
-                        league, checksum, expected)
-        print()
+        data = fd.read(TRACKS * RECORDS * RECORD_SIZE + CHECKSUM_SIZE)
+        log.info(League.from_data(data, league, raise_on_checksum=False).pretty(level=1))
 
     data = fd.read(1)
     flags, checksum = unpack(data, 4, 4)

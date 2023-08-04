@@ -23,6 +23,8 @@ Copyright (C) 2023 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
 """
 
+_T = t.TypeVar("_T")  # general-use
+
 
 class FZeroError(Exception):
     """Base class for custom exceptions with %-formatting for args
@@ -57,6 +59,11 @@ def printf(msg: object = "", *args: object) -> None:
 def interpolate(msg: object = "", *args: object) -> str:
     """String interpolation (%-formatting) as a function"""
     return (str(msg) % args) if args else str(msg)
+
+
+def chunked(data: t.Sequence[_T], chunk_size: int) -> t.Iterator[t.List[_T]]:
+    # Adapted from https://stackoverflow.com/a/312464/624066
+    return (list(data[i:i + chunk_size]) for i in range(0, len(data), chunk_size))
 
 
 def setup_logging(
