@@ -90,7 +90,11 @@ class Record:
 
     @classmethod
     def from_data(cls, data: bytes) -> Record:
-        record = tuple(unpack(data, 8, 8, 4, 2, 1, 1))
+        try:
+            record = tuple(unpack(data, 8, 8, 4, 2, 1, 1))
+        except ValueError:
+            log.warning("Invalid Record data: %s", data.hex(":").upper())
+            return cls()
         return cls(
             cents   = record[0],
             seconds = record[1],
@@ -291,7 +295,7 @@ class Save:
         for league in self.leagues:
             msg += f"{league.name} League\n{league.pretty(level=1)}\n"
         unlocks = ", ".join(list(LEAGUE_INFO)[i] for i, v in enumerate(self.unlocks) if v)
-        return msg + f"Master difficulty unlocked for leagues: {unlocks}"
+        return msg + "Master difficulty unlocked for leagues: " + (unlocks or "-")
 
 
 def unpack(data: t.Union[bytes, int], *bit_lengths: int) -> t.Iterable[int]:
