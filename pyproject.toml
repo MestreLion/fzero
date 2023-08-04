@@ -48,7 +48,7 @@ dev = [
 # -----------------------------------------------------------------------------
 # Entry points
 [project.scripts]
-fzero-save-editor = "fzero.__main__:run"
+fzero-save-editor = "fzero.main:run"
 
 # -----------------------------------------------------------------------------
 # Building
@@ -61,7 +61,7 @@ build-backend = "setuptools.build_meta"
 package-data = {'*' = ['py.typed']}
 
 [tool.setuptools.dynamic]
-version = {attr = "fzero.__main__.__version__"}
+version = {attr = "fzero.main.__version__"}
 
 # -----------------------------------------------------------------------------
 # Tools

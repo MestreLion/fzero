@@ -11,7 +11,7 @@ import typing as t
 from . import sram
 from . import util as u
 
-__version__ = "0.2023.8"
+__version__ = "2023.8.4"
 
 log: logging.Logger = logging.getLogger(__package__)
 
@@ -49,6 +49,3 @@ def run(argv: t.Optional[t.List[str]] = None) -> None:
     except KeyboardInterrupt:
         log.info("Aborting")
         sys.exit(2)  # signal.SIGINT.value, but not actually killed by SIGINT
-
-
-run()
