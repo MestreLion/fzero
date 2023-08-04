@@ -272,6 +272,20 @@ class Save:
             unlocks = []
         return [bool(_) for _ in unlocks][:LEAGUES]
 
+    def to_data(self) -> bytes:
+        data = (
+            SIGNATURE +
+            b''.join(_.to_data() for _ in self.leagues) +
+            self._pack_unlocks() +
+            SIGNATURE
+        )
+        return data + b'\0' * (SRAM_SIZE - len(data))
+
+    def _pack_unlocks(self) -> bytes:
+        bits = UNLOCKS_SIZE * 8 // 2
+        unlocks = 2 * (self.unlocks + (bits - len(self.unlocks)) * [False])[:bits]
+        return pack(*zip(unlocks, len(unlocks) * [1]))
+
     def pretty(self) -> str:
         msg = ""
         for league in self.leagues:

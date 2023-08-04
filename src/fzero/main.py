@@ -30,7 +30,10 @@ def cli(argv: t.Optional[t.List[str]] = None) -> None:
     u.setup_logging(level=args.loglevel, fmt="%(levelname)-8s: %(message)s")
     log.debug(args)
 
-    print(sram.Save.from_sram(args.infile).pretty())
+    save = sram.Save.from_sram(args.infile)
+    log.info(save.pretty())
+
+    assert (data := save.to_data()) == save.from_data(data).to_data()
 
 
 def run(argv: t.Optional[t.List[str]] = None) -> None:
