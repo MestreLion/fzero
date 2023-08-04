@@ -24,7 +24,8 @@ License: GPLv3 or later, at your choice. See <http://www.gnu.org/licenses/gpl>
 """
 
 _T = t.TypeVar("_T")  # general-use
-_SequenceT = t.TypeVar("_SequenceT", bound=t.Sequence)
+_SequenceT = t.TypeVar("_SequenceT", bound=t.Sequence[t.Any])
+
 
 class FZeroError(Exception):
     """Base class for custom exceptions with %-formatting for args
@@ -67,7 +68,7 @@ def chunked(data: t.Sequence[_T], chunk_size: int) -> t.Iterator[t.List[_T]]:
 
 
 def sliced(data: _SequenceT, offset: int = 0, length: int = 0) -> _SequenceT:
-    return data[offset:offset + length]
+    return t.cast(_SequenceT, data[offset:offset + length])
 
 
 def setup_logging(

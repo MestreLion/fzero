@@ -192,7 +192,7 @@ class League:
         return self.to_data()[-CHECKSUM_SIZE:]
 
     @property
-    def tracks(self):
+    def tracks(self) -> t.Tuple[str, ...]:
         return LEAGUE_INFO.get(self.name) or tuple(f"Track {_ + 1}" for _ in range(TRACKS))
 
     def pretty(self, level: int = 0, show_hidden: bool = False) -> str:
