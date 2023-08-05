@@ -184,22 +184,25 @@ class League:
         return data + Checksum.from_data(data).to_data()
 
     @property
-    def checksum(self) -> bytes:
-        return self.to_data()[-CHECKSUM_SIZE:]
-
-    @property
     def tracks(self) -> t.Tuple[str, ...]:
+        """Tuple of track names, based on the previously defined League name"""
         return LEAGUE_INFO.get(self.name) or tuple(f"Track {_ + 1}" for _ in range(TRACKS))
+
+    def track_records(self) -> t.Iterable[t.Tuple[str, t.List[Record], Record]]:
+        """Iterable of (track name, race records, best lap)-tuples for each track"""
+        tracks = self.tracks
+        records = u.chunked(self.records, RECORDS)
+        return ((tracks[track], r[:-1], r[-1]) for track, r in enumerate(records))
 
     def pretty(self, level: int = 0, show_hidden: bool = False) -> str:
         msg = ""
         indent = level * "\t"
-        tracks = self.tracks
-        for track, records in enumerate(u.chunked(self.records, RECORDS)):
-            msg += f"{indent}{tracks[track]}\n"
-            for r, record in enumerate(records, 1):
+        for track, records, lap in self.track_records():
+            msg += f"{indent}{track}\n"
+            for r, record in enumerate(records + [lap], 1):
                 if record.display or show_hidden:
-                    msg += f"{indent}\t{r:2}: {record.pretty()}\n"
+                    label = f"{r:8}" if r < RECORDS else 'Best Lap'
+                    msg += f"{indent}\t{label}: {record.pretty()}\n"
         return msg
 
 
@@ -283,7 +286,7 @@ class Save:
             self._pack_unlocks() +
             SIGNATURE
         )
-        return data + b'\0' * (SRAM_SIZE - len(data))
+        return data.ljust(SRAM_SIZE, b"\0")
 
     def _pack_unlocks(self) -> bytes:
         bits = UNLOCKS_SIZE * 8 // 2
