@@ -194,15 +194,15 @@ class League:
         records = u.chunked(self.records, len(self.records) // len(tracks))  # RECORDS
         return ((tracks[track], r[:-1], r[-1]) for track, r in enumerate(records))
 
-    def pretty(self, level: int = 0, show_hidden: bool = False) -> str:
+    def pretty(self, level: int = 0, show_hidden_records: bool = False) -> str:
         msg = ""
         indent = level * "\t"
         for track, records, lap in self.track_records():
             msg += f"{indent}{track}\n"
-            lap_idx = len(records)  # RECORDS
+            lap_idx = len(records) + 1
             for r, record in enumerate(records + [lap], 1):
-                if record.display or show_hidden:
-                    label = f"{r:8}" if r < lap_idx else 'Best Lap'
+                if record.display or show_hidden_records:
+                    label = f"{r:8}" if r < lap_idx else 'Best Lap' # RECORDS
                     msg += f"{indent}\t{label}: {record.pretty()}\n"
         return msg
 
@@ -295,10 +295,16 @@ class Save:
         unlocks = 2 * (self.unlocks + (bits - len(self.unlocks)) * [False])[:bits]
         return pack(*zip(unlocks, len(unlocks) * [1]))
 
-    def pretty(self) -> str:
-        msg = ""
-        for league in self.leagues:
-            msg += f"{league.name} League\n{league.pretty(level=1)}\n"
+    def pretty(self, show_hidden_records=False) -> str:
+        msg = "".join(
+            "\n".join(
+                (
+                    f"{league.name} League",
+                    league.pretty(level=1, show_hidden_records=show_hidden_records),
+                    "",
+                )
+            ) for league in self.leagues
+        )
         unlocks = ", ".join(list(LEAGUE_INFO)[i] for i, v in enumerate(self.unlocks) if v)
         return msg + "Master difficulty unlocked for leagues: " + (unlocks or "-")
 
