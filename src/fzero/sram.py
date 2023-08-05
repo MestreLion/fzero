@@ -166,7 +166,6 @@ class League:
                           offset, i, r, record.to_data().hex(":"), record)
                 self.records.append(record)
                 offset += RECORD_SIZE
-
         checksum = Checksum.parse(u.sliced(data, offset, CHECKSUM_SIZE))
         expected = Checksum.from_data(u.sliced(data, 0, offset))
         if checksum == expected:
@@ -180,6 +179,7 @@ class League:
         return self
 
     def to_data(self) -> bytes:
+        # TODO: Pad missing records with default record, sort by time
         data = b''.join(_.to_data() for _ in self.records)
         return data + Checksum.from_data(data).to_data()
 
@@ -191,7 +191,7 @@ class League:
     def track_records(self) -> t.Iterable[t.Tuple[str, t.List[Record], Record]]:
         """Iterable of (track name, race records, best lap)-tuples for each track"""
         tracks = self.tracks
-        records = u.chunked(self.records, RECORDS)
+        records = u.chunked(self.records, len(self.records) // len(tracks))  # RECORDS
         return ((tracks[track], r[:-1], r[-1]) for track, r in enumerate(records))
 
     def pretty(self, level: int = 0, show_hidden: bool = False) -> str:
@@ -199,9 +199,10 @@ class League:
         indent = level * "\t"
         for track, records, lap in self.track_records():
             msg += f"{indent}{track}\n"
+            lap_idx = len(records)  # RECORDS
             for r, record in enumerate(records + [lap], 1):
                 if record.display or show_hidden:
-                    label = f"{r:8}" if r < RECORDS else 'Best Lap'
+                    label = f"{r:8}" if r < lap_idx else 'Best Lap'
                     msg += f"{indent}\t{label}: {record.pretty()}\n"
         return msg
 
@@ -280,6 +281,7 @@ class Save:
         return [bool(_) for _ in unlocks][:LEAGUES]
 
     def to_data(self) -> bytes:
+        # TODO: Pad missing leagues
         data = (
             SIGNATURE +
             b''.join(_.to_data() for _ in self.leagues) +
