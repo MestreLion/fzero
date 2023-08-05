@@ -124,6 +124,11 @@ class Record:
             return "-"
         return f"{self.time.pretty()} {self.mode.pretty()} {self.car.pretty()}"
 
+    def __lt__(self, other):
+        if not isinstance(other, Record):
+            return NotImplemented
+        return self.time < other.time
+
     def __str__(self) -> str:
         text = f"{self.time} {self.mode} {self.car}"
         if not self.display:
@@ -289,6 +294,31 @@ class Save:
             SIGNATURE
         )
         return data.ljust(SRAM_SIZE, b"\0")
+
+    def merge(self, *saves: Save) -> Save:
+        for save in saves:
+            for self_league, save_league in zip(self.leagues, save.leagues):
+                if not self_league.name == save_league.name:
+                    log.warning("Mismatching Leagues on merge: %s, %s",
+                                self_league.name, save_league.name)
+                    continue
+                records = []
+                for (
+                    (self_track, self_races, self_lap),
+                    (save_track, save_races, save_lap),
+                ) in zip(self_league.track_records(), save_league.track_records()):
+                    if not self_track == save_track:
+                        log.warning("Mismatching Tracks on merge: %s, %s",
+                                    self_track, save_track)
+                        records.extend(self_races[:RECORDS - 1])
+                        records.append(self_lap)
+                        continue
+                    records.extend(sorted(self_races + save_races)[:RECORDS - 1])
+                    records.append(min(self_lap, save_lap))
+                self_league.records = records
+            self.unlocks = [self_unlock or save_unlock for self_unlock, save_unlock in
+                            zip(self.unlocks, save.unlocks)]
+        return self
 
     def _pack_unlocks(self) -> bytes:
         bits = UNLOCKS_SIZE * 8 // 2
