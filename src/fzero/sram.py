@@ -25,6 +25,7 @@ RECORDS: int = 11  # Per track, 10 best races + 1 best lap
 RECORD_SIZE: int = 3  # mode+car+minutes, seconds, centiseconds
 CHECKSUM_SIZE: int = 2
 UNLOCKS_SIZE: int = 1  # Leagues' Master difficulty unlock status
+PADDING: bytes = b'\xFF'  # Default padding when saving to binary SRAM file
 LEAGUE_INFO: t.Dict[str, t.Tuple[str, str, str, str, str]] = {
     "Knight": (
         "Mute City I",
@@ -238,9 +239,11 @@ class Save:
         self,
         leagues: t.Iterable[League] = (),
         unlocks: t.Iterable[bool] = (),
+        padding: bytes = b'',
     ):
         self.leagues: t.List[League] = list(leagues)[:LEAGUES]
         self.unlocks: t.List[bool]   = list(unlocks)[:LEAGUES]
+        self.padding: bytes = padding
 
     @classmethod
     def from_sram(cls, path: u.PathLike) -> Save:
@@ -260,7 +263,11 @@ class Save:
                                                  name=league))
             offset += cls.LEAGUE_SIZE
         self.unlocks = cls._parse_unlocks(u.sliced(data, offset, UNLOCKS_SIZE))
-        cls._check_signature(data, offset + UNLOCKS_SIZE, "Footer")
+        offset += UNLOCKS_SIZE
+        cls._check_signature(data, offset, "Footer")
+        offset += cls.SIGNATURE_SIZE
+        if len(data) > offset:
+            self.padding = data[offset:offset + 1]
         return self
 
     @classmethod
@@ -285,7 +292,7 @@ class Save:
             unlocks = []
         return [bool(_) for _ in unlocks][:LEAGUES]
 
-    def to_data(self) -> bytes:
+    def to_data(self, padding: bytes = b'') -> bytes:
         # TODO: Pad missing leagues
         data = (
             SIGNATURE +
@@ -293,7 +300,7 @@ class Save:
             self._pack_unlocks() +
             SIGNATURE
         )
-        return data.ljust(SRAM_SIZE, b"\0")
+        return data.ljust(SRAM_SIZE, padding or self.padding or PADDING)
 
     def merge(self, *saves: Save) -> Save:
         for save in saves:
